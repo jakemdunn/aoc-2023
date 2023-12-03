@@ -74,7 +74,6 @@ const part2 = (rawInput: string) => {
             if (part.start < range[1] && part.end > range[0]) {
               gearRatios.push(parseInt(part.value));
             }
-            index++;
           });
         });
         if (gearRatios.length === 2) {
