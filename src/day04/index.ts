@@ -30,7 +30,7 @@ const part1 = (rawInput: string) => {
       const matches = card.numbers.filter((number) =>
         card.winners.includes(number)
       );
-      return matches.length ? sum + Math.pow(2, matches.length - 1) : sum;
+      return matches.length ? sum + (1 << (matches.length - 1)) : sum;
     }, 0)
     .toString();
 };
