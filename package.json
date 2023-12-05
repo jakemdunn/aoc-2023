@@ -15,11 +15,14 @@
   "author": "Jacob Dunn",
   "license": "ISC",
   "devDependencies": {
+    "@types/cli-progress": "^3.11.5",
     "@types/node": "^16.11.6",
     "aocrunner": "^1.9.6",
     "prettier": "^2.8.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "cli-progress": "^3.12.0"
+  },
   "engines": {
     "node": ">=16.13.0"
   }
