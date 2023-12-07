@@ -20,14 +20,11 @@ const parseInput = (rawInput: string, parseRow: (row: string) => string[]) => {
 const findPossibleWins = (input: ReturnType<typeof parseInput>) => {
   return input
     .reduce((sum, race) => {
-      const minHold =
-        0.5 *
-        (race.time -
-          Math.sqrt(Math.pow(race.time, 2) - 4 * (race.distance + 1)));
-      const maxHold =
-        0.5 *
-        (race.time +
-          Math.sqrt(Math.pow(race.time, 2) - 4 * (race.distance + 1)));
+      const quadPlusMinus = Math.sqrt(
+        Math.pow(race.time, 2) - 4 * (race.distance + 1)
+      );
+      const minHold = 0.5 * (race.time - quadPlusMinus);
+      const maxHold = 0.5 * (race.time + quadPlusMinus);
       return sum * (Math.floor(maxHold) - Math.ceil(minHold) + 1);
     }, 1)
     .toString();
