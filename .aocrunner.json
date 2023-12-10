@@ -140,16 +140,16 @@
     },
     {
       "part1": {
-        "solved": false,
-        "result": null,
+        "solved": true,
+        "result": "7145",
         "attempts": [],
-        "time": null
+        "time": 9.6685
       },
       "part2": {
-        "solved": false,
-        "result": null,
+        "solved": true,
+        "result": "445",
         "attempts": [],
-        "time": null
+        "time": 34.034497
       }
     },
     {
