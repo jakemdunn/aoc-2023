@@ -16,12 +16,14 @@
   "license": "ISC",
   "devDependencies": {
     "@types/cli-progress": "^3.11.5",
+    "@types/gifencoder": "^2.0.3",
     "@types/node": "^16.11.6",
     "aocrunner": "^1.9.6",
     "prettier": "^2.8.0"
   },
   "dependencies": {
-    "cli-progress": "^3.12.0"
+    "cli-progress": "^3.12.0",
+    "gifencoder": "^2.0.1"
   },
   "engines": {
     "node": ">=16.13.0"

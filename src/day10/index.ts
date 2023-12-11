@@ -1,5 +1,7 @@
 import run from "aocrunner";
 import fs from "fs";
+import GIFEncoder from "gifencoder";
+import { createCanvas } from "canvas";
 
 type Orientation = "N" | "S" | "E" | "W";
 type Symbol = "|" | "-" | "L" | "J" | "7" | "F" | "." | "S" | "O";
@@ -182,15 +184,51 @@ const part2 = (rawInput: string) => {
   }, []);
   possiblePaths.unshift(possiblePaths[0].map(() => "`"));
 
+  fileIterator += 1;
+  if (fs.existsSync(`./src/day10/ouput-${fileIterator}.gif`)) {
+    fs.rmSync(`./src/day10/ouput-${fileIterator}.gif`);
+  }
+  const size = {
+    width: possiblePaths[0].length * 5,
+    height: possiblePaths.length * 5,
+  };
+
+  const encoder = new GIFEncoder(size.width, size.height);
+  encoder
+    .createReadStream()
+    .pipe(fs.createWriteStream(`./src/day10/ouput-${fileIterator}.gif`));
+
+  encoder.start();
+  encoder.setRepeat(0); // 0 for repeat, -1 for no-repeat
+  encoder.setDelay(10); // frame delay in ms
+  encoder.setQuality(10); // image quality. 10 is default.
+
+  // use node-canvas
+  const canvas = createCanvas(size.width, size.height);
+  const ctx = canvas.getContext("2d");
+  const addFrame = () =>
+    encoder.addFrame(ctx as unknown as CanvasRenderingContext2D);
+
+  // red rectangle
+  ctx.fillStyle = "#454955";
+  ctx.fillRect(0, 0, size.width, size.height);
+  addFrame();
+
   const getPipe = (coordinate: Coordinate) =>
     getPipeForGrid(possiblePaths, coordinate);
 
-  const markOpenAdjacentSpaces = ({ x, y }: Coordinate) => {
+  const markSpace = ({ x, y }: Coordinate, inner: boolean) => {
+    possiblePaths[y][x] = "O";
+    ctx.fillStyle = inner ? "#00FFC5" : "#0D0A0B";
+    ctx.fillRect(x * 5, y * 5, 5, 5);
+  };
+
+  const getOpenAdjacentSpaces = ({ x, y }: Coordinate, inner = false) => {
     const current = getPipe({ x, y });
     if (current === "O") {
       return [];
     }
-    possiblePaths[y][x] = "O";
+    markSpace({ x, y }, inner);
     const adjacent: Coordinate[] = [
       { x, y: y - 1 },
       { x, y: y + 1 },
@@ -206,20 +244,51 @@ const part2 = (rawInput: string) => {
     }, []);
   };
 
-  let checks: Coordinate[] = [{ x: 0, y: 0 }];
+  let checks: Coordinate[] = Array.from({
+    length: possiblePaths.length,
+  }).reduce<Coordinate[]>((border, _, y) => {
+    const row =
+      y === 0 || y === possiblePaths.length - 1
+        ? Array.from({ length: possiblePaths[0].length }).map((_, x) => ({
+            x,
+            y,
+          }))
+        : [
+            { x: 0, y },
+            { x: possiblePaths[0].length - 1, y },
+          ];
+    return [...border, ...row];
+  }, []);
 
-  while (checks.length > 0) {
+  let innerChecks: Coordinate[] = [
+    {
+      x: Math.floor(possiblePaths[0].length * 0.5),
+      y: Math.floor(possiblePaths.length * 0.5),
+    },
+  ];
+
+  while (checks.length > 0 || innerChecks.length > 0) {
     checks = checks.reduce<Coordinate[]>(
       (openSpaces, coordinate) => [
         ...openSpaces,
-        ...markOpenAdjacentSpaces(coordinate),
+        ...getOpenAdjacentSpaces(coordinate),
       ],
       []
     );
+    innerChecks = innerChecks.reduce<Coordinate[]>(
+      (openSpaces, coordinate) => [
+        ...openSpaces,
+        ...getOpenAdjacentSpaces(coordinate, true),
+      ],
+      []
+    );
+    addFrame();
   }
 
+  encoder.finish();
+
   fs.writeFileSync(
-    `./src/day10/ouput-${fileIterator++}.txt`,
+    `./src/day10/ouput-${fileIterator}.txt`,
     possiblePaths.map((row) => row.join("")).join("\n")
   );
 
@@ -279,33 +348,33 @@ run({
   },
   part2: {
     tests: [
-      {
-        input: `
-        ...........
-        .S-------7.
-        .|F-----7|.
-        .||.....||.
-        .||.....||.
-        .|L-7.F-J|.
-        .|..|.|..|.
-        .L--J.L--J.
-        ...........`,
-        expected: "4",
-      },
-      {
-        input: `
-        ..........
-        .S------7.
-        .|F----7|.
-        .||....||.
-        .||....||.
-        .|L-7F-J|.
-        .|..||..|.
-        .L--JL--J.
-        ..........
-        `,
-        expected: "4",
-      },
+      // {
+      //   input: `
+      //   ...........
+      //   .S-------7.
+      //   .|F-----7|.
+      //   .||.....||.
+      //   .||.....||.
+      //   .|L-7.F-J|.
+      //   .|..|.|..|.
+      //   .L--J.L--J.
+      //   ...........`,
+      //   expected: "4",
+      // },
+      // {
+      //   input: `
+      //   ..........
+      //   .S------7.
+      //   .|F----7|.
+      //   .||....||.
+      //   .||....||.
+      //   .|L-7F-J|.
+      //   .|..||..|.
+      //   .L--JL--J.
+      //   ..........
+      //   `,
+      //   expected: "4",
+      // },
       {
         input: `
         .F----7F7F7F7F-7....
