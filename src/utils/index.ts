@@ -29,3 +29,16 @@
  *     import { myUtil } from '../utils'
  *
  */
+
+export const memoize = <Input extends unknown[], Output>(
+  rawFunction: (...args: Input) => Output
+) => {
+  const results = new Map<string, Output>();
+  return (...args: Input): Output => {
+    const key = args.join("-");
+    if (!results.has(key)) {
+      results.set(key, rawFunction(...args));
+    }
+    return results.get(key) as Output;
+  };
+};

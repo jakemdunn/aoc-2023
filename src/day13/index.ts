@@ -1,4 +1,5 @@
 import run from "aocrunner";
+import { memoize } from "../utils/index.js";
 
 const parseInput = (rawInput: string) =>
   rawInput.split("\n\n").map((pattern) => {
@@ -24,30 +25,14 @@ const parseInput = (rawInput: string) =>
     return { rows, columns, rowsReversed, columnsReversed, pattern };
   });
 
-const _binaryOnesMemo = new Map<number, bigint>();
-const binaryOnes = (length: number) => {
-  if (!_binaryOnesMemo.has(length)) {
-    _binaryOnesMemo.set(length, BigInt(2) ** BigInt(length) - BigInt(1));
-  }
-  return _binaryOnesMemo.get(length) as bigint;
-};
-const _masksMemo = new Map<string, bigint>();
-const getMask = (maskLength: number, binaryLength: number): bigint => {
-  const key = `${maskLength}-${binaryLength}`;
-  if (!_masksMemo.get(key)) {
-    _masksMemo.set(
-      key,
-      binaryOnes(maskLength) << BigInt(binaryLength - maskLength)
-    );
-  }
-  return _masksMemo.get(key) as bigint;
-};
+const binaryOnes = memoize(
+  (length: number) => BigInt(2) ** BigInt(length) - BigInt(1)
+);
+const getMask = memoize((maskLength: number, binaryLength: number): bigint => {
+  return binaryOnes(maskLength) << BigInt(binaryLength - maskLength);
+});
 
-type SearchFunction = (
-  comparison: bigint,
-  slice: [number, number],
-  length: number
-) => number;
+type SearchFunction = (comparison: bigint) => number;
 const findFold = (
   matrix: bigint[],
   reversed: bigint[],
@@ -60,15 +45,11 @@ const findFold = (
       Math.max(offset, 0),
       Math.min(offset + length, length),
     ];
-    const mask = getMask(slice[1] - slice[0], length - slice[0]);
+    const mask = getMask((slice[1] - slice[0]) * 0.5, length - slice[0]);
     const mirrored = matrix.reduce((sum, group, index) => {
       return (
         sum +
-        searchFunction(
-          (group ^ (reversed[index] >> BigInt(offset))) & mask,
-          slice,
-          length
-        )
+        searchFunction((group ^ (reversed[index] >> BigInt(offset))) & mask)
       );
     }, 0);
     if (mirrored === errorTolerance) {
@@ -123,14 +104,8 @@ const part1 = (rawInput: string) => {
 const part2 = (rawInput: string) => {
   const patterns = parseInput(rawInput);
 
-  const numberOfSmudges = (
-    input: bigint,
-    slice: [number, number],
-    length: number
-  ) =>
-    Number(input >> BigInt(length - slice[1] + (slice[1] - slice[0]) * 0.5))
-      .toString(2)
-      .match(/1/g)?.length ?? 0;
+  const numberOfSmudges = (input: bigint) =>
+    Number(input).toString(2).match(/1/g)?.length ?? 0;
 
   return sumOfAllFolds(patterns, numberOfSmudges, 1).toString();
 };
