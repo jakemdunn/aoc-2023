@@ -185,15 +185,7 @@ const part2 = (inputWithIterations: string) => {
     const key = `${index % 4}-${hash}`;
     if (results.has(key)) {
       const loop = index - (results.get(key) as number);
-      while (index < actionsToRun) {
-        index += loop;
-      }
-      index -= loop;
-      // console.log(
-      //   `duplicate key found. Applying loop of [${loop}] from [${results.get(
-      //     key
-      //   )}-${beforeLoop}] towards [${actionsToRun}], arrived at [${index}]`
-      // );
+      index = actionsToRun - ((actionsToRun - index) % loop);
       continue;
     }
     results.set(key, index);
