@@ -75,7 +75,7 @@ const shiftPlatform = (
   return Object.entries(platform.rows)
     .map(
       ([rowIndex, row]) =>
-        rowIndex +
+        `(${rowIndex})` +
         Object.entries(row)
           .map(([columnIndex, char]) => columnIndex + char)
           .join("")
@@ -115,21 +115,34 @@ const part2 = (inputWithIterations: string) => {
 
   const actionsToRun = (iterations ? parseInt(iterations) : 1000000000) * 4;
   const results = new Map<string, number>();
+  const steps = new Map<number, string>();
+  let finalHash: string = "";
   for (let index = 0; index < actionsToRun; index++) {
     const hash = actions[index % 4]();
 
     const key = `${index % 4}-${hash}`;
     if (results.has(key)) {
       const loop = index - (results.get(key) as number);
-      index = actionsToRun - ((actionsToRun - index) % loop);
-      continue;
+      const stepsAfterLoop = (actionsToRun - index) % loop;
+      const finalIndex = (results.get(key) as number) + stepsAfterLoop - 1;
+      finalHash = steps.get(finalIndex) as string;
+      break;
     }
+    steps.set(index, key);
     results.set(key, index);
   }
 
   return iterations
     ? debugPlatform(platform)
-    : getNorthLoadedWeight(platform).toString();
+    : [...finalHash.matchAll(/\((\d+)\)([^\()]+)/g)]
+        .reduce((sum, row) => {
+          return (
+            sum +
+            (row[2]?.match(/O/g)?.length ?? 0) *
+              (platform.height - parseInt(row[1]))
+          );
+        }, 0)
+        .toString();
 };
 
 const debugPlatform = (platform: Platform) => {
