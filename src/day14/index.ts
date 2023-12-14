@@ -67,22 +67,6 @@ const debugPlatform = (platform: Platform) => {
 };
 
 type Sets = keyof Pick<Platform, "columns" | "rows">;
-const setCharacter = (input: string, swap: string, index: number) =>
-  input.substring(0, index) + swap + input.substring(index + swap.length);
-const updateHash = (
-  hash: string,
-  entity: string,
-  setKey: Sets,
-  setIndex: string,
-  alternateIndex: string,
-  width: number
-) => {
-  const hashOffset =
-    setKey === "columns"
-      ? parseInt(alternateIndex) + parseInt(setIndex) * width
-      : parseInt(setIndex) + parseInt(alternateIndex) * width;
-  return setCharacter(hash, entity, hashOffset);
-};
 const shiftSet = (
   platform: Platform,
   direction: "up" | "down" = "up",
@@ -95,55 +79,37 @@ const shiftSet = (
       ? 0
       : (setKey === "columns" ? platform.height : platform.width) - 1;
 
-  return Object.entries(platform[setKey]).reduce(
-    (fullHash, [alternateIndex, set]) => {
-      const reduction: (
-        previousValue: [string, number],
-        currentValue: [string, Entity]
-      ) => [string, number] = ([setHash, nextOpenSlot], [setIndex, entity]) => {
-        if (entity === "#") {
-          return [
-            updateHash(
-              setHash,
-              entity,
-              setKey,
-              setIndex,
-              alternateIndex,
-              platform.width
-            ),
-            parseInt(setIndex) + shift,
-          ];
-        }
-        delete set[setIndex];
-        set[nextOpenSlot] = entity;
+  Object.entries(platform[setKey]).forEach(([alternateIndex, set]) => {
+    const reduction: (
+      nextOpenSlot: number,
+      currentValue: [string, Entity]
+    ) => number = (nextOpenSlot, [setIndex, entity]) => {
+      if (entity === "#") {
+        return parseInt(setIndex) + shift;
+      }
+      delete set[setIndex];
+      set[nextOpenSlot] = entity;
 
-        delete platform[alternateKey][setIndex][alternateIndex];
-        platform[alternateKey][nextOpenSlot][alternateIndex] = entity;
+      delete platform[alternateKey][setIndex][alternateIndex];
+      platform[alternateKey][nextOpenSlot][alternateIndex] = entity;
 
-        return [
-          updateHash(
-            setHash,
-            entity,
-            setKey,
-            nextOpenSlot.toString(),
-            alternateIndex,
-            platform.width
-          ),
-          nextOpenSlot + shift,
-        ];
-      };
-      return direction === "up"
-        ? Object.entries(set).reduce<[string, number]>(reduction, [
-            fullHash,
-            start,
-          ])[0]
-        : Object.entries(set).reduceRight<[string, number]>(reduction, [
-            fullHash,
-            start,
-          ])[0];
-    },
-    platform.blankHash
-  );
+      return nextOpenSlot + shift;
+    };
+    if (direction === "up") {
+      Object.entries(set).reduce<number>(reduction, start);
+    } else {
+      Object.entries(set).reduceRight<number>(reduction, start);
+    }
+  });
+  return Object.entries(platform.rows)
+    .map(
+      ([rowIndex, row]) =>
+        rowIndex +
+        Object.entries(row)
+          .map(([columnIndex, char]) => columnIndex + char)
+          .join("")
+    )
+    .join("");
 };
 
 const getNorthLoadedWeight = (platform: Platform) =>
@@ -160,7 +126,6 @@ const getNorthLoadedWeight = (platform: Platform) =>
   }, 0);
 
 const part1 = (rawInput: string) => {
-  // answer: 111979
   const platform = parseInput(rawInput);
   shiftSet(platform, "up", "columns");
   const platformWeight = getNorthLoadedWeight(platform);
