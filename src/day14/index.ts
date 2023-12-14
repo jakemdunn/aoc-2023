@@ -6,14 +6,12 @@ interface Platform {
   columns: Record<string, Record<string, Entity>>;
   width: number;
   height: number;
-  blankHash: string;
 }
 const parseInput = (rawInput: string) => {
   const rows = rawInput.split("\n");
   const dimensions = {
     width: rows[0].length,
     height: rows.length,
-    blankHash: rows.join("").replace(/[^.]/g, "."),
   };
   return rows.reduce<Platform>(
     (platform, row, rowIndex) => {
@@ -39,35 +37,8 @@ const parseInput = (rawInput: string) => {
   );
 };
 
-const debugPlatform = (platform: Platform) => {
-  return Object.values(platform.rows)
-    .map((row, rowIndex) => {
-      const rowOutput = Array(platform.width).fill(".");
-      Object.entries(row).forEach(([columnIndex, entity]) => {
-        rowOutput[parseInt(columnIndex)] = entity;
-      });
-      rowOutput.forEach((character, columnIndex) => {
-        if (character === ".") {
-          if (platform.columns[columnIndex][rowIndex]) {
-            throw new Error(
-              `Should not have found value at [${columnIndex},${rowIndex}]`
-            );
-          }
-        } else {
-          if (platform.columns[columnIndex][rowIndex] !== character) {
-            throw new Error(
-              `Found wrong value at [${columnIndex},${rowIndex}]`
-            );
-          }
-        }
-      });
-      return rowOutput.join("");
-    })
-    .join("\n");
-};
-
 type Sets = keyof Pick<Platform, "columns" | "rows">;
-const shiftSet = (
+const shiftPlatform = (
   platform: Platform,
   direction: "up" | "down" = "up",
   setKey: Sets = "columns"
@@ -127,7 +98,7 @@ const getNorthLoadedWeight = (platform: Platform) =>
 
 const part1 = (rawInput: string) => {
   const platform = parseInput(rawInput);
-  shiftSet(platform, "up", "columns");
+  shiftPlatform(platform, "up", "columns");
   const platformWeight = getNorthLoadedWeight(platform);
   return platformWeight.toString();
 };
@@ -136,10 +107,10 @@ const part2 = (inputWithIterations: string) => {
   const [rawInput, iterations] = inputWithIterations.split(",");
   const platform = parseInput(rawInput);
   const actions = [
-    () => shiftSet(platform, "up"),
-    () => shiftSet(platform, "up", "rows"),
-    () => shiftSet(platform, "down"),
-    () => shiftSet(platform, "down", "rows"),
+    () => shiftPlatform(platform, "up"),
+    () => shiftPlatform(platform, "up", "rows"),
+    () => shiftPlatform(platform, "down"),
+    () => shiftPlatform(platform, "down", "rows"),
   ];
 
   const actionsToRun = (iterations ? parseInt(iterations) : 1000000000) * 4;
@@ -159,6 +130,33 @@ const part2 = (inputWithIterations: string) => {
   return iterations
     ? debugPlatform(platform)
     : getNorthLoadedWeight(platform).toString();
+};
+
+const debugPlatform = (platform: Platform) => {
+  return Object.values(platform.rows)
+    .map((row, rowIndex) => {
+      const rowOutput = Array(platform.width).fill(".");
+      Object.entries(row).forEach(([columnIndex, entity]) => {
+        rowOutput[parseInt(columnIndex)] = entity;
+      });
+      rowOutput.forEach((character, columnIndex) => {
+        if (character === ".") {
+          if (platform.columns[columnIndex][rowIndex]) {
+            throw new Error(
+              `Should not have found value at [${columnIndex},${rowIndex}]`
+            );
+          }
+        } else {
+          if (platform.columns[columnIndex][rowIndex] !== character) {
+            throw new Error(
+              `Found wrong value at [${columnIndex},${rowIndex}]`
+            );
+          }
+        }
+      });
+      return rowOutput.join("");
+    })
+    .join("\n");
 };
 
 const input = `
