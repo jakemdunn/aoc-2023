@@ -9,64 +9,134 @@ const parseInput = (rawInput: string) =>
   rawInput.split("\n").map((row) => row.split("") as Tile[]);
 
 const poseKey = ({ x, y, orientation: o }: Pose) => `${x},${y},${o}`;
-const followBeam = (
+type LitState = Record<string, Record<string, boolean>>;
+const mergeState = (a: LitState, b: LitState) => ({
+  ...Object.entries(b).reduce(
+    (merged, [y, row]) => ({
+      ...merged,
+      [y]: { ...(merged[y] ?? {}), ...row },
+    }),
+    a
+  ),
+});
+type BeamCacheItem = { state: LitState; terminatingPoses?: Pose[] };
+type BeamCache = Map<string, BeamCacheItem>;
+const setCache = (
+  cache: BeamCache,
+  key: string,
+  { state, terminatingPoses }: BeamCacheItem
+) => {
+  const existingCache = cache.get(key);
+  const mergedCache: BeamCacheItem = {
+    state: existingCache ? mergeState(existingCache.state, state) : state,
+    terminatingPoses,
+  };
+  cache.set(key, mergedCache);
+  return mergedCache;
+};
+const getStateForBeam = (
   beam: Pose,
   tiles: Tiles,
-  onValidTile: (tile: Pose) => void,
-  existingBeams: Map<string, boolean>
-) => {
-  const key = poseKey(beam);
-  if (existingBeams.has(key)) {
-    return [];
+  cache: BeamCache = new Map(),
+  existingBeams = new Map<string, true>()
+): BeamCacheItem => {
+  const startingKey = poseKey(beam);
+  let currentBeams = [{ ...beam }];
+  let state: LitState = {};
+  let tile: Tile = ".";
+  do {
+    const singleBeam = currentBeams[0];
+    const key = poseKey(singleBeam);
+    const cachedItem = cache.get(key);
+    if (cachedItem) {
+      state = mergeState(state, cachedItem.state);
+      if (cachedItem.terminatingPoses) {
+        currentBeams = cachedItem.terminatingPoses;
+      } else {
+        return setCache(cache, startingKey, { state });
+      }
+    }
+    if (existingBeams.has(key)) {
+      return setCache(cache, startingKey, {
+        state,
+        terminatingPoses: [singleBeam],
+      });
+    }
+    tile = tiles[singleBeam.y]?.[singleBeam.x];
+    existingBeams.set(key, true);
+    if (tile) {
+      state[singleBeam.y] = {
+        ...(state[singleBeam.y] ?? {}),
+        [singleBeam.x]: true,
+      };
+    }
+    currentBeams = (tile && transforms[tile](singleBeam)) ?? [];
+  } while (currentBeams.length === 1 && tile === ".");
+
+  if (currentBeams.length === 0) {
+    return setCache(cache, startingKey, { state });
   }
-  const tile = tiles[beam.y]?.[beam.x];
-  if (tile) {
-    onValidTile(beam);
-  }
-  existingBeams.set(key, true);
-  return (tile && transforms[tile](beam)) ?? [];
+  const combinedState = currentBeams
+    .map((childBeam) => getStateForBeam(childBeam, tiles, cache, existingBeams))
+    .reduce<BeamCacheItem>(
+      (merged, childState) => {
+        return {
+          state: mergeState(merged.state, childState.state),
+          terminatingPoses: [
+            ...(merged.terminatingPoses ?? []),
+            ...(childState.terminatingPoses ?? []),
+          ],
+        };
+      },
+      { state }
+    );
+  return setCache(cache, startingKey, combinedState);
 };
-const followBeams = (
-  beams: Pose[],
-  tiles: Tiles,
-  onValidTile: (tile: Pose) => void,
-  existingBeams: Map<string, boolean>
-) => {
-  return beams.reduce<Pose[]>((validBeams, beam) => {
-    return [
-      ...validBeams,
-      ...followBeam(beam, tiles, onValidTile, existingBeams),
-    ];
-  }, []);
-};
+const getLit = (state: LitState) =>
+  Object.values(state).reduce(
+    (sum, row) =>
+      Object.values(row).reduce((rowSum, lit) => rowSum + (lit ? 1 : 0), sum),
+    0
+  );
 const part1 = (rawInput: string) => {
   const tiles = parseInput(rawInput);
-  const state = tiles.map((row) => row.map((tile) => false));
-  const existingBeams = new Map<string, boolean>();
-  let beams: Pose[] = [{ x: 0, y: 0, orientation: "E" }];
-  while (beams.length > 0) {
-    beams = followBeams(
-      beams,
-      tiles,
-      (beam) => {
-        state[beam.y][beam.x] = true;
-      },
-      existingBeams
-    );
-  }
-
-  return state
-    .reduce(
-      (sum, row) => row.reduce((rowSum, lit) => rowSum + (lit ? 1 : 0), sum),
-      0
-    )
-    .toString();
+  const { state } = getStateForBeam({ x: 0, y: 0, orientation: "E" }, tiles);
+  return getLit(state).toString();
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
+  const tiles = parseInput(rawInput);
+  const cache: BeamCache = new Map();
 
-  return;
+  const sources: Pose[] = [
+    ...[...Array(tiles[0].length)].map(
+      (_, x) => ({ x, y: 0, orientation: "S" } as Pose)
+    ),
+    ...[...Array(tiles[0].length)].map(
+      (_, x) => ({ x, y: tiles.length - 1, orientation: "N" } as Pose)
+    ),
+    ...[...Array(tiles.length)].map(
+      (_, y) => ({ x: 0, y, orientation: "E" } as Pose)
+    ),
+    ...[...Array(tiles.length)].map(
+      (_, y) => ({ x: tiles[0].length - 1, y, orientation: "W" } as Pose)
+    ),
+  ];
+
+  return sources
+    .reduce((max, pose) => {
+      const { state } = getStateForBeam(pose, tiles, cache);
+      const lit = getLit(state);
+      return Math.max(max, lit);
+    }, 0)
+    .toString();
+};
+const debugPath = (tiles: Tiles, state: LitState) => {
+  console.log(
+    tiles
+      .map((row, y) => row.map((c, x) => (state?.[y]?.[x] ? "X" : c)).join(""))
+      .join("\n")
+  );
 };
 
 const transformByOrientation = (
@@ -165,10 +235,10 @@ run({
   },
   part2: {
     tests: [
-      // {
-      //   input: ``,
-      //   expected: "",
-      // },
+      {
+        input,
+        expected: "51",
+      },
     ],
     solution: part2,
   },
