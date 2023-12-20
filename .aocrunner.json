@@ -268,13 +268,13 @@
           "7370",
           "18932"
         ],
-        "time": 1446.311002
+        "time": 16.254616
       },
       "part2": {
-        "solved": false,
-        "result": null,
+        "solved": true,
+        "result": "47452118468566",
         "attempts": [],
-        "time": null
+        "time": 7.93885
       }
     },
     {
