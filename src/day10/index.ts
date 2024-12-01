@@ -125,7 +125,7 @@ const findPath = (rawInput: string) => {
   let lastPipes = startingPipes.filter((pose) => pose) as Pose[];
 
   if (lastPipes.length !== 2) {
-    throw new Error("Something is afoot at the Circle K");
+    throw new Error("Strange things are afoot at the Circle K");
   }
 
   for (let maxIterations = 999999; maxIterations > 0; maxIterations--) {
